@@ -26,6 +26,7 @@ _FULL_ARGS = (
     200.0, "monthly",
     500.0, "weekly",
     300.0, "monthly",
+    ["Test Card A", "Test Card B"],
 )
 
 
@@ -147,6 +148,19 @@ class TestSaveAndLoad(unittest.TestCase):
         result = self._roundtrip(*_FULL_ARGS)
         self.assertAlmostEqual(result[10], 300.0)
         self.assertEqual(result[11], "monthly")
+
+    def test_cards_roundtrip(self):
+        result = self._roundtrip(*_FULL_ARGS)
+        self.assertEqual(result[12], ["Test Card A", "Test Card B"])
+
+    def test_missing_cards_key_returns_default(self):
+        path = os.path.join(self.tmpdir, "no_cards.json")
+        import json as _json
+        with open(path, "w") as f:
+            _json.dump({"subscriptions": []}, f)
+        result = _patched_load(path)
+        self.assertIsInstance(result[12], list)
+        self.assertGreater(len(result[12]), 0)
 
     def test_output_is_valid_json(self):
         _patched_save(self.path, *_FULL_ARGS)

@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from categories import InvestmentCategory, Savings, Brokerage, Retirement
-from constants import CYCLES, CARDS, monthly_equiv, LIGHT_THEME, DARK_THEME
+from constants import CYCLES, monthly_equiv, LIGHT_THEME, DARK_THEME
 from data import load_data, save_data
 from widgets import make_toggle_form
 
@@ -24,6 +24,7 @@ class SubscriptionApp(tk.Tk):
             savings_amount, savings_cycle,
             brokerage_amount, brokerage_cycle,
             retirement_amount, retirement_cycle,
+            self.cards,
         ) = load_data()
         self.investments: list[InvestmentCategory] = [
             Savings(savings_amount, savings_cycle),
@@ -50,6 +51,7 @@ class SubscriptionApp(tk.Tk):
             inv["savings_amount"], inv["savings_cycle"],
             inv["brokerage_amount"], inv["brokerage_cycle"],
             inv["retirement_amount"], inv["retirement_cycle"],
+            self.cards,
         )
 
     # ── UI Construction ───────────────────────────────────────────────────────
@@ -125,10 +127,11 @@ class SubscriptionApp(tk.Tk):
             self.day_var = tk.StringVar()
             ttk.Label(f, text="Charge day (1–31):").grid(row=1, column=2, sticky="e", **pad)
             ttk.Entry(f, textvariable=self.day_var, width=5).grid(row=1, column=3, sticky="w", **pad)
-            self.card_var = tk.StringVar(value=CARDS[0])
+            self.card_var = tk.StringVar(value=self.cards[0] if self.cards else "")
             ttk.Label(f, text="Credit card:").grid(row=2, column=0, sticky="e", **pad)
-            ttk.Combobox(f, textvariable=self.card_var, values=CARDS,
-                         state="readonly", width=20).grid(row=2, column=1, sticky="w", **pad)
+            self._card_combobox = ttk.Combobox(f, textvariable=self.card_var,
+                                               values=self.cards, state="readonly", width=20)
+            self._card_combobox.grid(row=2, column=1, sticky="w", **pad)
             ttk.Button(f, text="Add Subscription", command=self._add).grid(
                 row=3, column=0, columnspan=4, pady=(6, 2)
             )
@@ -166,6 +169,7 @@ class SubscriptionApp(tk.Tk):
         btn_frame.grid(row=1, column=0, columnspan=2, pady=(6, 2))
         ttk.Button(btn_frame, text="Remove Selected", command=self._remove).pack(side="left", padx=4)
         ttk.Button(btn_frame, text="Change Card", command=self._change_card).pack(side="left", padx=4)
+        ttk.Button(btn_frame, text="Manage Cards", command=self._manage_cards).pack(side="left", padx=4)
 
     def _build_grocery_panel(self):
         pad = {"padx": 8, "pady": 4}
@@ -435,8 +439,8 @@ class SubscriptionApp(tk.Tk):
         ttk.Label(dialog, text=f"Subscription: {sub['name']}").grid(
             row=0, column=0, columnspan=2, padx=12, pady=(12, 4))
         ttk.Label(dialog, text="Credit card:").grid(row=1, column=0, sticky="e", padx=8, pady=4)
-        card_var = tk.StringVar(value=sub.get("card", CARDS[0]))
-        ttk.Combobox(dialog, textvariable=card_var, values=CARDS,
+        card_var = tk.StringVar(value=sub.get("card", self.cards[0] if self.cards else ""))
+        ttk.Combobox(dialog, textvariable=card_var, values=self.cards,
                      state="readonly", width=18).grid(row=1, column=1, padx=8, pady=4)
 
         def _apply():
@@ -447,6 +451,54 @@ class SubscriptionApp(tk.Tk):
 
         ttk.Button(dialog, text="Update", command=_apply).grid(
             row=2, column=0, columnspan=2, pady=(8, 12))
+
+    def _manage_cards(self):
+        dialog = tk.Toplevel(self)
+        dialog.title("Manage Credit Cards")
+        dialog.resizable(False, False)
+        dialog.grab_set()
+
+        frame = ttk.Frame(dialog, padding=12)
+        frame.grid(row=0, column=0, sticky="nsew")
+
+        listbox = tk.Listbox(frame, width=38, height=8, selectmode="browse",
+                             exportselection=False)
+        for card in self.cards:
+            listbox.insert("end", card)
+        listbox.grid(row=0, column=0, columnspan=2, pady=(0, 8))
+
+        new_var = tk.StringVar()
+        entry = ttk.Entry(frame, textvariable=new_var, width=30)
+        entry.grid(row=1, column=0, padx=(0, 4), pady=(0, 4))
+        entry.focus()
+
+        def _add():
+            name = new_var.get().strip()
+            if not name:
+                return
+            if name in self.cards:
+                messagebox.showerror("Error", "That card already exists.", parent=dialog)
+                return
+            self.cards.append(name)
+            listbox.insert("end", name)
+            self._card_combobox.config(values=self.cards)
+            new_var.set("")
+            self._save()
+
+        def _remove():
+            sel = listbox.curselection()
+            if not sel:
+                return
+            idx = sel[0]
+            self.cards.pop(idx)
+            listbox.delete(idx)
+            self._card_combobox.config(values=self.cards)
+            self._save()
+
+        dialog.bind("<Return>", lambda _: _add())
+        ttk.Button(frame, text="Add", command=_add).grid(row=1, column=1, pady=(0, 4))
+        ttk.Button(frame, text="Remove Selected", command=_remove).grid(
+            row=2, column=0, columnspan=2, pady=(4, 0))
 
     def _add_receipt(self):
         date_raw = self.receipt_date_var.get().strip()

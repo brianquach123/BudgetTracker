@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-_DEFAULTS = ([], 0.0, "weekly", [], 0.0, [], 0.0, "monthly", 0.0, "monthly", 0.0, "monthly")
+_DEFAULTS = ([], 0.0, "weekly", [], 0.0, [], 0.0, "monthly", 0.0, "monthly", 0.0, "monthly",
+             ["Discover It", "C1 Venture Mastercard", "Sapphire Preferred Visa", "Prime Visa"])
 
 
 def _make_receipt(date, amount, store=None):

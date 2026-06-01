@@ -2,6 +2,8 @@ import json
 import os
 import sys
 
+from constants import CARDS as _DEFAULT_CARDS
+
 
 def _base_dir() -> str:
     if getattr(sys, "frozen", False):
@@ -11,7 +13,7 @@ def _base_dir() -> str:
 
 DATA_FILE = os.path.join(_base_dir(), "subscriptions.json")
 
-_DEFAULTS = [], 0.0, "weekly", [], 0.0, [], 0.0, "monthly", 0.0, "monthly", 0.0, "monthly"
+_DEFAULTS = [], 0.0, "weekly", [], 0.0, [], 0.0, "monthly", 0.0, "monthly", 0.0, "monthly", list(_DEFAULT_CARDS)
 
 
 def load_data():
@@ -35,12 +37,14 @@ def load_data():
         raw.get("brokerage_cycle", "monthly"),
         raw.get("retirement_amount", 0.0),
         raw.get("retirement_cycle", "monthly"),
+        raw.get("cards", list(_DEFAULT_CARDS)),
     )
 
 
 def save_data(subscriptions, rent_amount, rent_cycle, grocery_receipts,
               paycheck_biweekly, gas_receipts, savings_amount, savings_cycle,
-              brokerage_amount, brokerage_cycle, retirement_amount, retirement_cycle):
+              brokerage_amount, brokerage_cycle, retirement_amount, retirement_cycle,
+              cards):
     with open(DATA_FILE, "w") as f:
         json.dump(
             {
@@ -56,6 +60,7 @@ def save_data(subscriptions, rent_amount, rent_cycle, grocery_receipts,
                 "brokerage_cycle": brokerage_cycle,
                 "retirement_amount": retirement_amount,
                 "retirement_cycle": retirement_cycle,
+                "cards": cards,
             },
             f,
             indent=2,
