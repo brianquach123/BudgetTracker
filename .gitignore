@@ -1,0 +1,11 @@
+# Personal data — never commit
+subscriptions.json
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# IDE
+.vscode/
+.idea/
