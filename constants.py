@@ -24,7 +24,7 @@ DARK_THEME = {
     "canvas_bg":  "#1e1e1e",
 }
 
-CARDS = ["Discover It", "C1 Venture Mastercard", "Sapphire Preferred Visa", "Prime Visa"]
+CARDS = ["Discover It", "C1 Venture Mastercard", "C1 QuickSilver Mastercard (Virtual)", "Sapphire Preferred Visa", "Prime Visa"]
 
 CYCLE_TO_MONTHLY = {
     "monthly": lambda cost: cost,

@@ -414,7 +414,7 @@ class SubscriptionApp(tk.Tk):
         if not selected:
             messagebox.showinfo("Info", "Select a subscription to remove.")
             return
-        idx = self.tree.index(selected[0])
+        idx = int(selected[0])
         sub = self.subscriptions[idx]
         if messagebox.askyesno("Confirm", f"Remove '{sub['name']}'?"):
             self.subscriptions.pop(idx)
@@ -426,7 +426,7 @@ class SubscriptionApp(tk.Tk):
         if not selected:
             messagebox.showinfo("Info", "Select a subscription to update.")
             return
-        idx = self.tree.index(selected[0])
+        idx = int(selected[0])
         sub = self.subscriptions[idx]
         dialog = tk.Toplevel(self)
         dialog.title("Change Credit Card")
@@ -476,7 +476,7 @@ class SubscriptionApp(tk.Tk):
         if not selected:
             messagebox.showinfo("Info", "Select a receipt to remove.")
             return
-        idx = self.grocery_tree.index(selected[0])
+        idx = int(selected[0])
         self.grocery_receipts.pop(idx)
         self._save()
         self._refresh_groceries()
@@ -486,7 +486,7 @@ class SubscriptionApp(tk.Tk):
         if not selected:
             messagebox.showinfo("Info", "Select a receipt to update.")
             return
-        idx = self.grocery_tree.index(selected[0])
+        idx = int(selected[0])
         receipt = self.grocery_receipts[idx]
         dialog = tk.Toplevel(self)
         dialog.title("Change Store")
@@ -536,7 +536,7 @@ class SubscriptionApp(tk.Tk):
         if not selected:
             messagebox.showinfo("Info", "Select a receipt to remove.")
             return
-        idx = self.gas_tree.index(selected[0])
+        idx = int(selected[0])
         self.gas_receipts.pop(idx)
         self._save()
         self._refresh_gas()
@@ -640,8 +640,8 @@ class SubscriptionApp(tk.Tk):
     def _refresh_groceries(self):
         for row in self.grocery_tree.get_children():
             self.grocery_tree.delete(row)
-        for r in self.grocery_receipts:
-            self.grocery_tree.insert("", "end",
+        for i, r in enumerate(self.grocery_receipts):
+            self.grocery_tree.insert("", "end", iid=str(i),
                 values=(r["date"], r.get("store", ""), f"${r['amount']:.2f}"))
         self._apply_sort(self.grocery_tree, "date", True)
         n = len(self.grocery_receipts)
@@ -653,8 +653,8 @@ class SubscriptionApp(tk.Tk):
     def _refresh_gas(self):
         for row in self.gas_tree.get_children():
             self.gas_tree.delete(row)
-        for r in self.gas_receipts:
-            self.gas_tree.insert("", "end", values=(r["date"], f"${r['amount']:.2f}"))
+        for i, r in enumerate(self.gas_receipts):
+            self.gas_tree.insert("", "end", iid=str(i), values=(r["date"], f"${r['amount']:.2f}"))
         self._apply_sort(self.gas_tree, "date", True)
         n = len(self.gas_receipts)
         avg = sum(r["amount"] for r in self.gas_receipts) / n if n else 0.0
@@ -666,10 +666,10 @@ class SubscriptionApp(tk.Tk):
         for row in self.tree.get_children():
             self.tree.delete(row)
         subs_total = 0.0
-        for sub in self.subscriptions:
+        for i, sub in enumerate(self.subscriptions):
             equiv = monthly_equiv(sub)
             subs_total += equiv
-            self.tree.insert("", "end", values=(
+            self.tree.insert("", "end", iid=str(i), values=(
                 sub["name"], f"${sub['cost']:.2f}", sub["billing_cycle"],
                 sub["charge_day"], f"${equiv:.2f}", sub.get("card", ""),
             ))

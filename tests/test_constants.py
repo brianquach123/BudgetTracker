@@ -7,11 +7,12 @@ class TestCycles(unittest.TestCase):
         for cycle in ["monthly", "yearly", "quarterly", "weekly"]:
             self.assertIn(cycle, CYCLES)
 
-    def test_cards_has_four_entries(self):
-        self.assertEqual(len(CARDS), 4)
+    def test_cards_has_five_entries(self):
+        self.assertEqual(len(CARDS), 5)
 
     def test_cards_contains_expected_names(self):
-        for card in ["Discover It", "C1 Venture Mastercard", "Sapphire Preferred Visa", "Prime Visa"]:
+        for card in ["Discover It", "C1 Venture Mastercard", "C1 QuickSilver Mastercard (Virtual)",
+                     "Sapphire Preferred Visa", "Prime Visa"]:
             self.assertIn(card, CARDS)
 
 
