@@ -1,7 +1,15 @@
 import json
 import os
+import sys
 
-DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subscriptions.json")
+
+def _base_dir() -> str:
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+DATA_FILE = os.path.join(_base_dir(), "subscriptions.json")
 
 _DEFAULTS = [], 0.0, "weekly", [], 0.0, [], 0.0, "monthly", 0.0, "monthly", 0.0, "monthly"
 
