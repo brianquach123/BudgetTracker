@@ -14,10 +14,25 @@ class SubscriptionApp(tk.Tk):
         self.title("Budget and Subscription Tracker")
         self.resizable(True, True)
         self.minsize(1200, 500)
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=1)
-        self.columnconfigure(2, weight=1)
-        self.rowconfigure(6, weight=1)
+        toolbar = ttk.Frame(self, padding=(8, 4))
+        toolbar.pack(side="top", fill="x")
+        self._theme_btn = ttk.Button(toolbar, text="Dark Mode",
+                                     command=self._toggle_dark_mode, width=11)
+        self._theme_btn.pack(side="right")
+        self._censor_btn = ttk.Button(toolbar, text="Show Numbers",
+                                      command=self._toggle_censor, width=14)
+        self._censor_btn.pack(side="right", padx=(0, 6))
+
+        notebook = ttk.Notebook(self)
+        notebook.pack(fill="both", expand=True)
+        self.tab1 = ttk.Frame(notebook)
+        self.tab2 = ttk.Frame(notebook)
+        notebook.add(self.tab1, text="Budget Tracker")
+        notebook.add(self.tab2, text="Credit Card Inventory")
+        self.tab1.columnconfigure(0, weight=1)
+        self.tab1.columnconfigure(1, weight=1)
+        self.tab1.columnconfigure(2, weight=1)
+        self.tab1.rowconfigure(6, weight=1)
         (
             self.subscriptions, self.rent_amount, self.rent_cycle,
             self.grocery_receipts, self.paycheck_biweekly, self.gas_receipts,
@@ -61,6 +76,7 @@ class SubscriptionApp(tk.Tk):
         self._build_grocery_panel()
         self._build_gas_panel()
         self._build_summary_panel()
+        self._build_credit_card_inventory()
 
     def _build_left_panel(self):
         pad = {"padx": 8, "pady": 4}
@@ -84,7 +100,7 @@ class SubscriptionApp(tk.Tk):
             ttk.Combobox(f, textvariable=self.rent_cycle_var,
                          values=["weekly", "monthly"], state="readonly", width=9
                          ).grid(row=0, column=3, sticky="w", **pad)
-            ttk.Button(f, text="Save Rent", command=self._save_rent).grid(row=0, column=4, **pad)
+            ttk.Button(f, text="Save", command=self._save_rent).grid(row=0, column=4, **pad)
 
         for i, cat in enumerate(self.investments, start=2):
             def _build_investment(f, cat=cat):
@@ -109,7 +125,7 @@ class SubscriptionApp(tk.Tk):
                     self._save()
                     self._refresh_summary(sum(monthly_equiv(s) for s in self.subscriptions))
                 ttk.Button(f, text="Save", command=_save_cat).grid(row=0, column=4, **pad)
-            make_toggle_form(self, i, cat.label, cat.color, cat.fg_color, _build_investment)
+            make_toggle_form(self.tab1, i, cat.label, cat.color, cat.fg_color, _build_investment)
 
         def _build_subscription(f):
             f.columnconfigure(1, weight=2)
@@ -136,11 +152,11 @@ class SubscriptionApp(tk.Tk):
                 row=3, column=0, columnspan=4, pady=(6, 2)
             )
 
-        make_toggle_form(self, 0, "Paycheck (Biweekly, After Tax)", "#43a047", "white", _build_paycheck)
-        make_toggle_form(self, 1, "Rent",             "#7b1fa2", "white", _build_rent)
-        make_toggle_form(self, 5, "Add Subscription", "#fb8c00", "white", _build_subscription)
+        make_toggle_form(self.tab1, 0, "Paycheck (Biweekly, After Tax)", "#43a047", "white", _build_paycheck)
+        make_toggle_form(self.tab1, 1, "Rent / Mortgage",   "#7b1fa2", "white", _build_rent)
+        make_toggle_form(self.tab1, 5, "Add Subscription", "#fb8c00", "white", _build_subscription)
 
-        list_frame = ttk.LabelFrame(self, text="Subscriptions", padding=8)
+        list_frame = ttk.LabelFrame(self.tab1, text="Subscriptions", padding=8)
         list_frame.grid(row=6, column=0, sticky="nsew", padx=(12, 6), pady=4)
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
@@ -159,6 +175,8 @@ class SubscriptionApp(tk.Tk):
             self.tree.heading(col, text=label, command=lambda c=col: self._sort_tree(self.tree, c))
             self.tree.column(col, width=width, anchor="center")
         self.tree.column("name", anchor="w")
+        for col in ("cost", "cycle", "day", "monthly"):
+            self.tree.column(col, stretch=False)
 
         scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -173,7 +191,7 @@ class SubscriptionApp(tk.Tk):
 
     def _build_grocery_panel(self):
         pad = {"padx": 8, "pady": 4}
-        outer = ttk.Frame(self)
+        outer = ttk.Frame(self.tab1)
         outer.grid(row=0, column=1, rowspan=7, sticky="nsew", padx=6, pady=(12, 4))
         outer.columnconfigure(0, weight=1)
         outer.rowconfigure(2, weight=1)
@@ -225,6 +243,8 @@ class SubscriptionApp(tk.Tk):
         self.grocery_tree.heading("amount", text="Amount",
                                    command=lambda: self._sort_tree(self.grocery_tree, "amount"))
         self.grocery_tree.column("amount", width=90, anchor="center")
+        self.grocery_tree.column("date",   stretch=False)
+        self.grocery_tree.column("amount", stretch=False)
 
         g_scroll = ttk.Scrollbar(outer, orient="vertical", command=self.grocery_tree.yview)
         self.grocery_tree.configure(yscrollcommand=g_scroll.set)
@@ -241,7 +261,7 @@ class SubscriptionApp(tk.Tk):
 
     def _build_gas_panel(self):
         pad = {"padx": 8, "pady": 4}
-        outer = ttk.Frame(self)
+        outer = ttk.Frame(self.tab1)
         outer.grid(row=0, column=2, rowspan=7, sticky="nsew", padx=(6, 12), pady=(12, 4))
         outer.columnconfigure(0, weight=1)
         outer.rowconfigure(2, weight=1)
@@ -287,6 +307,7 @@ class SubscriptionApp(tk.Tk):
         self.gas_tree.heading("amount", text="Amount",
                               command=lambda: self._sort_tree(self.gas_tree, "amount"))
         self.gas_tree.column("amount", width=110, anchor="center")
+        self.gas_tree.column("amount", stretch=False)
 
         gas_scroll = ttk.Scrollbar(outer, orient="vertical", command=self.gas_tree.yview)
         self.gas_tree.configure(yscrollcommand=gas_scroll.set)
@@ -299,7 +320,7 @@ class SubscriptionApp(tk.Tk):
         self.gas_avg_label.grid(row=4, column=0, columnspan=2, pady=(0, 4))
 
     def _build_summary_panel(self):
-        summary = ttk.Frame(self, padding=(12, 4, 12, 12))
+        summary = ttk.Frame(self.tab1, padding=(12, 4, 12, 12))
         summary.grid(row=7, column=0, columnspan=3, sticky="ew")
         summary.columnconfigure(0, weight=1)
         summary.columnconfigure(1, weight=0)
@@ -308,20 +329,12 @@ class SubscriptionApp(tk.Tk):
         ttk.Label(summary, text="Monthly paycheck equivalent:").grid(row=0, column=0, sticky="w")
         self.paycheck_label = ttk.Label(summary, text="$0.00 (100%)", anchor="e")
         self.paycheck_label.grid(row=0, column=1, sticky="ew", padx=(8, 0))
-        btn_bar = ttk.Frame(summary)
-        btn_bar.grid(row=0, column=2, sticky="e", padx=(12, 0))
-        self._censor_btn = ttk.Button(btn_bar, text="Show Numbers",
-                                      command=self._toggle_censor, width=14)
-        self._censor_btn.pack(side="left", padx=(0, 4))
-        self._theme_btn = ttk.Button(btn_bar, text="Dark Mode",
-                                     command=self._toggle_dark_mode, width=11)
-        self._theme_btn.pack(side="left")
         ttk.Separator(summary, orient="horizontal").grid(
             row=1, column=0, columnspan=3, sticky="ew", pady=2)
 
         static_rows = [
             (2, "subs_label",    "Subscriptions monthly:"),
-            (3, "rent_label",    "Rent monthly:"),
+            (3, "rent_label",    "Rent / Mortgage monthly:"),
             (4, "grocery_label", "Grocery monthly average:"),
             (5, "gas_label",     "Gas monthly average:"),
         ]
@@ -351,6 +364,77 @@ class SubscriptionApp(tk.Tk):
         self.leftover_label = ttk.Label(summary, text="Leftover: $0.00 (—)",
                                         font=("", 11, "bold"), anchor="e")
         self.leftover_label.grid(row=10, column=2, sticky="ew", padx=(12, 0))
+
+    def _build_credit_card_inventory(self):
+        self.tab2.columnconfigure(0, weight=1)
+        self.tab2.rowconfigure(1, weight=1)
+
+        # ── Input form ────────────────────────────────────────────────────────
+        form = ttk.LabelFrame(self.tab2, text="Add Card", padding=8)
+        form.grid(row=0, column=0, sticky="ew", padx=20, pady=(12, 8))
+        form.columnconfigure(0, weight=1)
+
+        self._inv_name_var = tk.StringVar()
+        inv_entry = ttk.Entry(form, textvariable=self._inv_name_var, width=40)
+        inv_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        inv_entry.bind("<Return>", lambda _: self._add_inventory_card())
+        ttk.Button(form, text="Add", command=self._add_inventory_card).grid(row=0, column=1)
+
+        # ── Card list ─────────────────────────────────────────────────────────
+        list_frame = ttk.LabelFrame(self.tab2, text="Cards", padding=8)
+        list_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 12))
+        list_frame.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
+
+        self._inv_tree = ttk.Treeview(list_frame, columns=("name",),
+                                      show="headings", selectmode="browse")
+        self._inv_tree.heading("name", text="Card Name",
+                               command=lambda: self._sort_tree(self._inv_tree, "name"))
+        self._inv_tree.column("name", anchor="w", stretch=True)
+
+        inv_scroll = ttk.Scrollbar(list_frame, orient="vertical",
+                                   command=self._inv_tree.yview)
+        self._inv_tree.configure(yscrollcommand=inv_scroll.set)
+        self._inv_tree.grid(row=0, column=0, sticky="nsew")
+        inv_scroll.grid(row=0, column=1, sticky="ns")
+
+        ttk.Button(list_frame, text="Remove Selected",
+                   command=self._remove_inventory_card).grid(
+            row=1, column=0, columnspan=2, pady=(6, 0))
+
+        self._refresh_inventory()
+
+    # ── Credit Card Inventory ─────────────────────────────────────────────────
+
+    def _refresh_inventory(self):
+        for iid in self._inv_tree.get_children():
+            self._inv_tree.delete(iid)
+        for i, card in enumerate(self.cards):
+            self._inv_tree.insert("", "end", iid=str(i), values=(card,))
+
+    def _add_inventory_card(self):
+        name = self._inv_name_var.get().strip()
+        if not name:
+            return
+        if name in self.cards:
+            messagebox.showerror("Error", "That card already exists.")
+            return
+        self.cards.append(name)
+        self._save()
+        self._card_combobox.config(values=self.cards)
+        self._inv_name_var.set("")
+        self._refresh_inventory()
+
+    def _remove_inventory_card(self):
+        selected = self._inv_tree.selection()
+        if not selected:
+            messagebox.showinfo("Info", "Select a card to remove.")
+            return
+        idx = int(selected[0])
+        self.cards.pop(idx)
+        self._save()
+        self._card_combobox.config(values=self.cards)
+        self._refresh_inventory()
 
     # ── Actions ───────────────────────────────────────────────────────────────
 
@@ -484,6 +568,7 @@ class SubscriptionApp(tk.Tk):
             self._card_combobox.config(values=self.cards)
             new_var.set("")
             self._save()
+            self._refresh_inventory()
 
         def _remove():
             sel = listbox.curselection()
@@ -494,6 +579,7 @@ class SubscriptionApp(tk.Tk):
             listbox.delete(idx)
             self._card_combobox.config(values=self.cards)
             self._save()
+            self._refresh_inventory()
 
         dialog.bind("<Return>", lambda _: _add())
         ttk.Button(frame, text="Add", command=_add).grid(row=1, column=1, pady=(0, 4))
@@ -644,6 +730,13 @@ class SubscriptionApp(tk.Tk):
         style.configure("TScrollbar",
             background=c["heading_bg"], troughcolor=c["bg"],
             bordercolor=c["bg"], arrowcolor=c["fg"])
+        style.configure("TNotebook", background=c["bg"])
+        style.configure("TNotebook.Tab",
+            background=c["heading_bg"], foreground=c["fg"],
+            padding=(10, 4))
+        style.map("TNotebook.Tab",
+            background=[("selected", c["select_bg"]), ("active", c["heading_bg"])],
+            foreground=[("selected", c["select_fg"]), ("active", c["fg"])])
         # update canvas background if already created
         if hasattr(self, "budget_canvas"):
             self.budget_canvas.configure(bg=c["canvas_bg"])
@@ -737,7 +830,7 @@ class SubscriptionApp(tk.Tk):
                 self.tree.item(iid, values=vals)
 
     def _refresh_summary(self, subs_total):
-        paycheck_monthly = self.paycheck_biweekly * 26 / 12
+        paycheck_monthly = self.paycheck_biweekly * 2
         rent_monthly = (
             self.rent_amount * 52 / 12 if self.rent_cycle == "weekly" else self.rent_amount
         )
@@ -780,7 +873,7 @@ class SubscriptionApp(tk.Tk):
         if w <= 1:
             return
 
-        paycheck_monthly = self.paycheck_biweekly * 26 / 12
+        paycheck_monthly = self.paycheck_biweekly * 2
         subs_total = sum(monthly_equiv(s) for s in self.subscriptions)
         rent_monthly = (
             self.rent_amount * 52 / 12 if self.rent_cycle == "weekly" else self.rent_amount
