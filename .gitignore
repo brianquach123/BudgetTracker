@@ -1,6 +1,3 @@
-# Personal data — never commit
-subscriptions.json
-
 # Python
 .venv/
 __pycache__/
