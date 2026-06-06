@@ -6,6 +6,7 @@ from categories import InvestmentCategory, Savings, Brokerage, Retirement
 from constants import CYCLES, monthly_equiv, LIGHT_THEME, DARK_THEME
 from data import load_data, save_data
 from widgets import make_toggle_form
+from pdf_export import export_budget_pdf
 
 
 class SubscriptionApp(tk.Tk):
@@ -14,14 +15,19 @@ class SubscriptionApp(tk.Tk):
         self.title("Budget and Subscription Tracker")
         self.resizable(True, True)
         self.minsize(1200, 500)
+        self._dark_mode = datetime.datetime.now().hour >= 21
         toolbar = ttk.Frame(self, padding=(8, 4))
         toolbar.pack(side="top", fill="x")
-        self._theme_btn = ttk.Button(toolbar, text="Dark Mode",
-                                     command=self._toggle_dark_mode, width=11)
+        self._theme_btn = ttk.Button(toolbar,
+                                     text="☀" if self._dark_mode else "🌙",
+                                     command=self._toggle_dark_mode, width=3)
         self._theme_btn.pack(side="right")
         self._censor_btn = ttk.Button(toolbar, text="Show Numbers",
                                       command=self._toggle_censor, width=14)
         self._censor_btn.pack(side="right", padx=(0, 6))
+        self._pdf_btn = ttk.Button(toolbar, text="Export as PDF",
+                                   command=self._export_pdf, width=14)
+        self._pdf_btn.pack(side="right", padx=(0, 6))
 
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True)
@@ -48,8 +54,7 @@ class SubscriptionApp(tk.Tk):
         ]
         self._sort_state = {}
         self._censored = True
-        self._dark_mode = False
-        self._apply_theme(LIGHT_THEME)
+        self._apply_theme(DARK_THEME if self._dark_mode else LIGHT_THEME)
         self._build_ui()
         self._refresh_list()
         self._refresh_groceries()
@@ -684,9 +689,18 @@ class SubscriptionApp(tk.Tk):
         self._censor_btn.config(text="Show Numbers" if self._censored else "Hide Numbers")
         self._refresh_list()
 
+    def _export_pdf(self):
+        export_budget_pdf(
+            self.paycheck_biweekly, self.subscriptions,
+            self.rent_amount, self.rent_cycle,
+            self.grocery_receipts, self.gas_receipts,
+            self.investments,
+            self.cards,
+        )
+
     def _toggle_dark_mode(self):
         self._dark_mode = not self._dark_mode
-        self._theme_btn.config(text="Light Mode" if self._dark_mode else "Dark Mode")
+        self._theme_btn.config(text="☀" if self._dark_mode else "🌙")
         self._apply_theme(DARK_THEME if self._dark_mode else LIGHT_THEME)
 
     def _apply_theme(self, c):
