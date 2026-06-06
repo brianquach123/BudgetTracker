@@ -11,3 +11,6 @@ __pycache__/
 dist/
 build/
 *.spec
+
+# User data
+subscriptions.json

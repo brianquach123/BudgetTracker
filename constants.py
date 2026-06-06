@@ -1,3 +1,5 @@
+__version__ = "2.0.0"
+
 CYCLES = ["monthly", "yearly", "quarterly", "weekly"]
 
 LIGHT_THEME = {
