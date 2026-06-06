@@ -1,10 +1,11 @@
 import datetime
+import sys
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 from categories import InvestmentCategory, Savings, Brokerage, Retirement
 from constants import CYCLES, monthly_equiv, LIGHT_THEME, DARK_THEME
-from data import load_data, save_data
+from data import load_data, save_data, init_encryption
 from widgets import make_toggle_form
 from pdf_export import export_budget_pdf
 
@@ -28,6 +29,11 @@ class SubscriptionApp(tk.Tk):
         self._pdf_btn = ttk.Button(toolbar, text="Export as PDF",
                                    command=self._export_pdf, width=14)
         self._pdf_btn.pack(side="right", padx=(0, 6))
+
+        self.withdraw()
+        if not init_encryption(self):
+            self.destroy()
+            sys.exit(0)
 
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True)
@@ -54,11 +60,18 @@ class SubscriptionApp(tk.Tk):
         ]
         self._sort_state = {}
         self._censored = True
-        self._apply_theme(DARK_THEME if self._dark_mode else LIGHT_THEME)
         self._build_ui()
+        self._apply_theme(DARK_THEME if self._dark_mode else LIGHT_THEME)
         self._refresh_list()
         self._refresh_groceries()
         self._refresh_gas()
+
+        self.update_idletasks()
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        w = max(self.winfo_reqwidth(), self.winfo_width())
+        h = max(self.winfo_reqheight(), self.winfo_height())
+        self.geometry(f"+{(sw - w) // 2}+{(sh - h) // 2}")
+        self.deiconify()
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
