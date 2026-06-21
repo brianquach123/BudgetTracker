@@ -9,6 +9,21 @@ from data import load_data, save_data, init_encryption
 from widgets import make_toggle_form
 from pdf_export import export_budget_pdf
 
+_OPEN_EYE_XBM = (
+    "#define e_width 16\n#define e_height 10\n"
+    "static unsigned char e_bits[] = {\n"
+    "  0x00,0x00, 0xF0,0x0F, 0x0C,0x30, 0xC2,0x43,\n"
+    "  0xC2,0x43, 0xC2,0x43, 0x0C,0x30, 0xF0,0x0F,\n"
+    "  0x00,0x00, 0x00,0x00};"
+)
+_CLOSED_EYE_XBM = (
+    "#define e_width 16\n#define e_height 10\n"
+    "static unsigned char e_bits[] = {\n"
+    "  0x00,0x00, 0x00,0x00, 0x00,0x00, 0xE0,0x07,\n"
+    "  0xF8,0x1F, 0xE0,0x07, 0x00,0x00, 0x00,0x00,\n"
+    "  0x00,0x00, 0x00,0x00};"
+)
+
 
 class SubscriptionApp(tk.Tk):
     def __init__(self):
@@ -17,14 +32,15 @@ class SubscriptionApp(tk.Tk):
         self.resizable(True, True)
         self.minsize(1200, 500)
         self._dark_mode = datetime.datetime.now().hour >= 21
+        self._build_eye_icons()
         toolbar = ttk.Frame(self, padding=(8, 4))
         toolbar.pack(side="top", fill="x")
         self._theme_btn = ttk.Button(toolbar,
                                      text="☀" if self._dark_mode else "🌙",
                                      command=self._toggle_dark_mode, width=3)
         self._theme_btn.pack(side="right")
-        self._censor_btn = ttk.Button(toolbar, text="Show Numbers",
-                                      command=self._toggle_censor, width=14)
+        self._censor_btn = ttk.Button(toolbar, image=self._eye_closed_img,
+                                      command=self._toggle_censor)
         self._censor_btn.pack(side="right", padx=(0, 6))
         self._pdf_btn = ttk.Button(toolbar, text="Export as PDF",
                                    command=self._export_pdf, width=14)
@@ -172,7 +188,7 @@ class SubscriptionApp(tk.Tk):
 
         make_toggle_form(self.tab1, 0, "Paycheck (Biweekly, After Tax)", "#43a047", "white", _build_paycheck)
         make_toggle_form(self.tab1, 1, "Rent / Mortgage",   "#7b1fa2", "white", _build_rent)
-        make_toggle_form(self.tab1, 5, "Add Subscription", "#fb8c00", "white", _build_subscription)
+        make_toggle_form(self.tab1, 5, "Subscription", "#fb8c00", "white", _build_subscription)
 
         list_frame = ttk.LabelFrame(self.tab1, text="Subscriptions", padding=8)
         list_frame.grid(row=6, column=0, sticky="nsew", padx=(12, 6), pady=4)
@@ -699,7 +715,9 @@ class SubscriptionApp(tk.Tk):
 
     def _toggle_censor(self):
         self._censored = not self._censored
-        self._censor_btn.config(text="Show Numbers" if self._censored else "Hide Numbers")
+        self._censor_btn.config(
+            image=self._eye_open_img if not self._censored else self._eye_closed_img
+        )
         self._refresh_list()
 
     def _export_pdf(self):
@@ -711,10 +729,19 @@ class SubscriptionApp(tk.Tk):
             self.cards,
         )
 
+    def _build_eye_icons(self):
+        fg = "white" if self._dark_mode else "#000000"
+        self._eye_open_img   = tk.BitmapImage(data=_OPEN_EYE_XBM,   foreground=fg)
+        self._eye_closed_img = tk.BitmapImage(data=_CLOSED_EYE_XBM, foreground=fg)
+
     def _toggle_dark_mode(self):
         self._dark_mode = not self._dark_mode
         self._theme_btn.config(text="☀" if self._dark_mode else "🌙")
         self._apply_theme(DARK_THEME if self._dark_mode else LIGHT_THEME)
+        self._build_eye_icons()
+        self._censor_btn.config(
+            image=self._eye_open_img if not self._censored else self._eye_closed_img
+        )
 
     def _apply_theme(self, c):
         self.configure(bg=c["bg"])
@@ -936,23 +963,42 @@ class SubscriptionApp(tk.Tk):
                  else avail / combined if combined > 0 else 0)
         c.create_rectangle(pad_x, y0, pad_x + avail, y1, fill="#d0d0d0", outline="")
 
-        segments = [
+        expense_segments = [
             (subs_total,   "#e53935" if over else "#fb8c00"),
             (rent_monthly, "#7b1fa2"),
             (grocery_m,    "#1976d2"),
             (gas_m,        "#795548"),
-            *investment_segments,
         ]
+
         x = pad_x
         right_edge = pad_x + avail
-        for amount, color in segments:
+        for amount, color in expense_segments:
             seg_w = min(amount * scale, right_edge - x)
             if seg_w > 0:
                 c.create_rectangle(x, y0, x + seg_w, y1, fill=color, outline="")
                 x += seg_w
 
-        ratio = (combined / paycheck_monthly if paycheck_monthly > 0
-                 else 1.0 if combined > 0 else 0.0)
-        c.create_text(w / 2, y0 + bar_h / 2,
-                      text=f"Expenses  ${combined:,.2f}/mo",
-                      fill="white" if ratio > 0.25 else "#555", font=("", 9, "bold"))
+        expense_group_end = x
+
+        for amount, color in investment_segments:
+            seg_w = min(amount * scale, right_edge - x)
+            if seg_w > 0:
+                c.create_rectangle(x, y0, x + seg_w, y1, fill=color, outline="")
+                x += seg_w
+
+        investment_group_end = x
+
+        expense_total = subs_total + rent_monthly + grocery_m + gas_m
+        investment_total = sum(m for m, _ in investment_segments)
+        exp_pct = round(expense_total / paycheck_monthly * 100) if paycheck_monthly > 0 else 0
+        inv_pct = round(investment_total / paycheck_monthly * 100) if paycheck_monthly > 0 else 0
+
+        expense_group_width = expense_group_end - pad_x
+        if expense_group_width > 0:
+            c.create_text(pad_x + expense_group_width / 2, y0 + bar_h / 2,
+                          text=f"Expenses ({exp_pct}%)", fill="white", font=("", 9, "bold"))
+
+        investment_group_width = investment_group_end - expense_group_end
+        if investment_segments and investment_total > 0 and investment_group_width > 0:
+            c.create_text(expense_group_end + investment_group_width / 2, y0 + bar_h / 2,
+                          text=f"Growth ({inv_pct}%)", fill="white", font=("", 9, "bold"))

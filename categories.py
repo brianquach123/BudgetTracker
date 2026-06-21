@@ -30,9 +30,9 @@ class InvestmentCategory(ABC):
 
 class Savings(InvestmentCategory):
     label = "Savings"
-    color = "#a5d6a7"
-    fg_color = "#1a1a1a"
-    bar_color = "#a5d6a7"
+    color = "#2e7d32"
+    fg_color = "white"
+    bar_color = "#2e7d32"
 
     @property
     def amount_key(self) -> str:
